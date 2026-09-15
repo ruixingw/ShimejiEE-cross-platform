@@ -51,6 +51,7 @@ ShimejiEE/
 ├── lib/               原生库(勿动)
 ├── conf/              配置(含 settings.properties)
 ├── img/               桌宠包(每个子目录一个)
+│   └── icons/         可选:托盘图标(启动时随机选用一个)
 └── sound/             全局音效(可选)
 ```
 

@@ -43,6 +43,7 @@ public record ShimejiProgramFolder(
     private static final String DEFAULT_SOUND_DIR = "sound";
 
     private static final String UNUSED_DIR = "unused";
+    private static final String ICONS_DIR = "icons";
     private static final String ICON_NAME = "icon.png";
     private static final String SHIME_1 = "shime1.png";
 
@@ -90,7 +91,7 @@ public record ShimejiProgramFolder(
     /**
      * Names of the image sets in the program folder
      * @return if {@link #isMonoImageSet()} is true then it returns a list with one empty string,
-     *         otherwise it returns all directories in {@link #imgPath()} except dot-files and 'unused'
+     *         otherwise it returns all directories in {@link #imgPath()} except dot-files, 'unused' and 'icons'
      */
     public List<String> getImageSetNames() throws IOException {
         if (isMonoImageSet) {
@@ -98,7 +99,7 @@ public record ShimejiProgramFolder(
         }
         var matches =  listMatchingFilesIn(imgPath, ((path, basicFileAttributes) -> {
             String name = path.getFileName().toString().toLowerCase();
-            boolean ignored = name.charAt(0) == '.' || name.equalsIgnoreCase(UNUSED_DIR);
+            boolean ignored = name.charAt(0) == '.' || name.equalsIgnoreCase(UNUSED_DIR) || name.equalsIgnoreCase(ICONS_DIR);
             boolean isDir = basicFileAttributes.isDirectory();
             return !ignored && isDir;
         }));
@@ -153,6 +154,26 @@ public record ShimejiProgramFolder(
             return iconPath;
         } else {
             return null;
+        }
+    }
+
+    /**
+     * The available tray icons ({@code img/icons/*.png}), sorted by name.
+     * <p>
+     * A random one of these is used for the tray on startup.
+     */
+    public List<Path> getTrayIconChoices() {
+        Path iconsDir = imgPath.resolve(ICONS_DIR);
+        if (!Files.isDirectory(iconsDir)) {
+            return List.of();
+        }
+
+        try {
+            return listMatchingFilesIn(iconsDir, (path, attrs) ->
+                    attrs.isRegularFile() && path.getFileName().toString().toLowerCase().endsWith(".png"))
+                    .stream().sorted().toList();
+        } catch (IOException e) {
+            return List.of();
         }
     }
 

@@ -1,5 +1,7 @@
 package com.group_finity.mascotapp;
 
+import com.group_finity.mascot.imageset.ShimejiProgramFolder;
+
 import java.util.Collection;
 import java.util.Locale;
 
@@ -14,4 +16,6 @@ public interface Controller {
     void reloadImageSets();
 
     void runGlobalAction(String name);
+
+    ShimejiProgramFolder getProgramFolder();
 }

@@ -13,7 +13,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Path;
 import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
@@ -97,6 +99,76 @@ public class TrayGui implements NativeUi {
         return btn;
     }
 
+    //--- tray icon choices (img/icons/*.png, a random one on startup)
+
+    private Path chosenTrayIcon;
+
+    private Menu buildTrayIconMenu() {
+        var iconMenu = new Menu(Tr.tr("TrayIcon"));
+
+        var choices = getTrayIconChoices();
+        Path active = activeTrayIcon(choices);
+
+        for (Path iconPath : choices) {
+            String name = iconPath.getFileName().toString().replaceFirst("(?i)\\.png$", "");
+            final var btn = new MenuItem(name);
+            btn.setEnabled(!iconPath.equals(active));
+            btn.addActionListener(e -> {
+                chosenTrayIcon = iconPath;
+                applyTrayIcon(iconPath);
+                for (int i = 0; i < iconMenu.getItemCount(); i++) {
+                    iconMenu.getItem(i).setEnabled(true);
+                }
+                btn.setEnabled(false);
+            });
+            iconMenu.add(btn);
+        }
+
+        if (choices.isEmpty()) {
+            var none = new MenuItem(Tr.tr("NeedsReload"));
+            none.setEnabled(false);
+            iconMenu.add(none);
+        }
+
+        return iconMenu;
+    }
+
+    private List<Path> getTrayIconChoices() {
+        try {
+            return controller.getProgramFolder().getTrayIconChoices();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    /**
+     * The icon to use right now: the user's session choice, else a random
+     * one of the available choices (re-picked on every startup/reload).
+     */
+    private Path activeTrayIcon(List<Path> choices) {
+        if (chosenTrayIcon != null && choices.contains(chosenTrayIcon)) {
+            return chosenTrayIcon;
+        }
+        if (choices.isEmpty()) {
+            return null;
+        }
+        return choices.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(choices.size()));
+    }
+
+    private void applyTrayIcon(Path iconPath) {
+        if (trayIcon == null || iconPath == null) {
+            return;
+        }
+        try {
+            var img = ImageIO.read(iconPath.toFile());
+            if (img != null) {
+                trayIcon.setImage(img);
+            }
+        } catch (Exception e) {
+            log.log(Level.WARNING, "unable to load tray icon " + iconPath, e);
+        }
+    }
+
     private void createTrayIcon() {
         if (!SystemTray.isSupported()) {
             return;
@@ -178,6 +250,7 @@ public class TrayGui implements NativeUi {
 
         trayPopup.add(languageMenu);
         trayPopup.add(scalingMenu);
+        trayPopup.add(buildTrayIconMenu());
         trayPopup.add(bvTogglesMenu);
         trayPopup.add(imgTogglesMenu);
 
@@ -197,10 +270,23 @@ public class TrayGui implements NativeUi {
             //adding the tray icon
 
             Image trayIconImg = null;
-            try {
-                trayIconImg = ImageIO.read(Objects.requireNonNull(this.getClass().getResourceAsStream("/icon.png")));
-            } catch (Exception e) {
-                log.log(Level.WARNING, "unable to load tray icon", e);
+
+            // a random icon from img/icons on startup (or the session choice after a reload)
+            Path activeIcon = activeTrayIcon(getTrayIconChoices());
+            if (activeIcon != null) {
+                try {
+                    trayIconImg = ImageIO.read(activeIcon.toFile());
+                } catch (Exception e) {
+                    log.log(Level.WARNING, "unable to load tray icon " + activeIcon, e);
+                }
+            }
+
+            if (trayIconImg == null) {
+                try {
+                    trayIconImg = ImageIO.read(Objects.requireNonNull(this.getClass().getResourceAsStream("/icon.png")));
+                } catch (Exception e) {
+                    log.log(Level.WARNING, "unable to load tray icon", e);
+                }
             }
 
             if (trayIconImg == null) {
@@ -212,6 +298,7 @@ public class TrayGui implements NativeUi {
                             ? prefs.ShimejiEENameOverride
                             : "ShimejiEE",
                     trayPopup);
+            trayIcon.setImageAutoSize(true);
 
             // show tray icon
             SystemTray.getSystemTray().add(trayIcon);

@@ -60,6 +60,7 @@ ShimejiEE/
 ├── lib/               native libraries (leave alone)
 ├── conf/              configuration (incl. settings.properties)
 ├── img/               image sets (one folder each)
+│   └── icons/         optional tray icons (a random one is picked on startup)
 └── sound/             global sounds (optional)
 ```
 

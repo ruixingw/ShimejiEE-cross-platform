@@ -362,6 +362,11 @@ public final class AppController implements Runnable, ImageSetSelectionDelegate,
         }
     }
 
+    @Override
+    public ShimejiProgramFolder getProgramFolder() {
+        return programFolder;
+    }
+
     //----------mascot creation-----------//
 
     /**
