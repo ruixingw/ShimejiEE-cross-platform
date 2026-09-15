@@ -152,12 +152,26 @@ public class MascotEnvironment {
     /**
      * The bounds of the current IE (interactive environment)
      * <p>
-     * The IE is generally the "frontmost window" but this can be platform dependent.
+     * The IE is generally the "frontmost window" but this can be platform dependent
      * If there is no IE the {@link Area#isVisible() isVisible()} method of the returned Area will return false.
      */
     public Area getActiveIE() {
-        return impl.getActiveIE();
+        Area activeIE = impl.getActiveIE();
+
+        // when multiscreen is off, windows on other screens are ignored
+        if (activeIE.isVisible() && !mascot.isMultiscreenAllowed()
+                && !getWorkArea(true).toRectangle().intersects(activeIE.toRectangle())) {
+            return INVISIBLE_IE;
+        }
+        return activeIE;
     }
+
+    private static final Area INVISIBLE_IE = new Area() {
+        @Override
+        public boolean isVisible() {
+            return false;
+        }
+    };
 
     /**
      * Name of the current IE

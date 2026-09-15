@@ -24,6 +24,27 @@ public class Prefs  {
             if (!field.accessFlags().contains(AccessFlag.PUBLIC)) { continue; }
 
             var prefName = field.getName().replace('_', '.');
+
+            if (field.getType() == Map.class) {
+                // maps are stored as multiple "<fieldName>.<key>" entries
+                var map = new LinkedHashMap<String, String>();
+                String prefix = prefName + ".";
+                for (var entry : prefs.entrySet()) {
+                    if (entry.getKey().startsWith(prefix)) {
+                        map.put(entry.getKey().substring(prefix.length()), entry.getValue());
+                    }
+                }
+                var whole = System.getProperty(Constants.PREF_PROP_PREFIX + prefName);
+                if (whole != null) {
+                    map.putAll(parseSlashMap(whole));
+                }
+                try {
+                    field.set(target, map);
+                } catch (IllegalAccessException ignored) {
+                }
+                continue;
+            }
+
             var raw = getSetting(prefs, prefName);
 
             if (raw == null) { continue; }
@@ -42,6 +63,17 @@ public class Prefs  {
         }
     }
 
+    private static Map<String, String> parseSlashMap(String raw) {
+        var map = new LinkedHashMap<String, String>();
+        for (String pair : raw.split(";")) {
+            int eq = pair.indexOf('=');
+            if (eq > 0) {
+                map.put(pair.substring(0, eq).trim(), pair.substring(eq + 1).trim());
+            }
+        }
+        return map;
+    }
+
     private static Map<String, String> serialize(Object target) {
         Map<String, String> values = new HashMap<>();
         if (target == null) {
@@ -55,7 +87,16 @@ public class Prefs  {
 
             try {
                 var value = field.get(target);
-                if (value != null) {
+                if (value == null) {
+                    continue;
+                }
+                if (value instanceof Map<?, ?> map) {
+                    for (var entry : map.entrySet()) {
+                        if (entry.getKey() != null && entry.getValue() != null) {
+                            values.put(field.getName().replace('_', '.') + "." + entry.getKey(), entry.getValue().toString());
+                        }
+                    }
+                } else {
                     values.put(field.getName().replace('_', '.'), value.toString());
                 }
             } catch (IllegalAccessException _) {

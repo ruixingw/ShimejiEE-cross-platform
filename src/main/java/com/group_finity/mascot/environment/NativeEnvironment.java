@@ -102,6 +102,25 @@ public interface NativeEnvironment {
      */
     default void restoreIE() {}
 
+    //---accessibility
+
+    /**
+     * Whether this process is trusted by the platform's accessibility api.
+     * <p>
+     * Untrusted environments can't query/move other app's windows,
+     * which disables ie (window) interactions.
+     *
+     * @return true when accessibility isn't needed or has been granted.
+     */
+    default boolean isAccessibilityTrusted() {
+        return true;
+    }
+
+    /**
+     * Shows the system prompt asking the user for accessibility trust.
+     */
+    default void requestAccessibilityTrust() {}
+
     //---cursor
 
     /**
@@ -109,5 +128,32 @@ public interface NativeEnvironment {
      */
     Location getCursor();
 
+    //---interactive window filter
+
+    /**
+     * Restricts which windows count as interactive environments (mascot
+     * carried/thrown windows) based on their titles.
+     * <p>
+     * Empty lists accept every window. Backends that can't read window titles
+     * can ignore this.
+     *
+     * @param whitelist accepted title substrings (slash separated captions).
+     * @param blacklist rejected title substrings, takes precedence over the whitelist.
+     */
+    default void setInteractiveWindowFilter(java.util.List<String> whitelist, java.util.List<String> blacklist) {}
+
+    //---virtual desktop settings
+
+    /**
+     * Pushes the virtual desktop (window mode) settings.
+     * <p>
+     * Values are the raw pref strings; only the virtual desktop backend uses them.
+     *
+     * @param windowSize "width x height" of the window (eg {@code 900x600}).
+     * @param background hex background colour (eg {@code #00FF00}).
+     * @param backgroundMode one of centre/fill/fit/stretch.
+     * @param backgroundImage path of a background image, empty for none.
+     */
+    default void applyVirtualDesktopSettings(String windowSize, String background, String backgroundMode, String backgroundImage) {}
 
 }

@@ -90,16 +90,23 @@ public abstract class BaseNativeEnvironment implements NativeEnvironment {
      * @see #getNewDisplayBoundsList()
      */
     public void updateDisplayBounds() {
+        final List<Rectangle> newBounds = getNewDisplayBoundsList();
+
+        // reuse existing areas when possible so held references stay valid
+        while (screenAreas.size() > newBounds.size()) {
+            screenAreas.remove(screenAreas.size() - 1);
+        }
+        while (screenAreas.size() < newBounds.size()) {
+            screenAreas.add(new Area());
+        }
+
         Rectangle totalBounds = new Rectangle();
-        screenAreas.clear();
+        for (int i = 0; i < newBounds.size(); i++) {
+            totalBounds = totalBounds.union(newBounds.get(i));
 
-        for (var sb : getNewDisplayBoundsList()) {
-            totalBounds = totalBounds.union(sb);
-
-            Area screenArea = new Area();
-            screenArea.set(sb);
-            screenArea.set(sb); // remove delta
-            screenAreas.add(screenArea);
+            Area screenArea = screenAreas.get(i);
+            screenArea.set(newBounds.get(i));
+            screenArea.set(newBounds.get(i)); // remove delta
         }
 
         Rectangle primary = screenAreas.size() > 0
@@ -143,7 +150,17 @@ public abstract class BaseNativeEnvironment implements NativeEnvironment {
     public void tick() {
         updateIe(ieArea);
         updateCursorLocation();
+
+        // periodically pick up display configuration changes
+        // (dock position, monitor hotplug, resolution changes, etc)
+        if (++tickCount >= DISPLAY_REFRESH_TICKS) {
+            tickCount = 0;
+            updateDisplayBounds();
+        }
     }
+
+    private int tickCount = 0;
+    private static final int DISPLAY_REFRESH_TICKS = 125; // ~5s at 40ms ticks
 
     //--- interactive environment
 

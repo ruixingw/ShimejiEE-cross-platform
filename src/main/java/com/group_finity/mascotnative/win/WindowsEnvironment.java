@@ -2,6 +2,7 @@ package com.group_finity.mascotnative.win;
 
 import com.group_finity.mascot.environment.Area;
 import com.group_finity.mascot.environment.BaseNativeEnvironment;
+import com.group_finity.mascot.environment.WindowTitleFilter;
 import com.group_finity.mascotnative.win.WindowsIe.IeStatus;
 import com.group_finity.mascotnative.win.jna.Dwmapi;
 import com.group_finity.mascotnative.win.jna.User32;
@@ -19,6 +20,13 @@ import static com.sun.jna.platform.win32.WinUser.MONITORINFO;
 import static com.sun.jna.platform.win32.WinUser.WNDENUMPROC;
 
 class WindowsEnvironment extends BaseNativeEnvironment {
+
+    private volatile WindowTitleFilter windowFilter = WindowTitleFilter.ALLOW_ALL;
+
+    @Override
+    public void setInteractiveWindowFilter(List<String> whitelist, List<String> blacklist) {
+        windowFilter = WindowTitleFilter.of(whitelist, blacklist);
+    }
 
     @Override
     protected List<Rectangle> getNewDisplayBoundsList() {
@@ -45,7 +53,7 @@ class WindowsEnvironment extends BaseNativeEnvironment {
         }
 
         String title = getTitleOf(hWnd);
-        if (title.isEmpty() || title.equals("Program Manager")) {
+        if (title.isEmpty() || title.equals("Program Manager") || !windowFilter.test(title)) {
             return new WindowsIe(hWnd, IeStatus.PASS_THROUGH);
         }
 
