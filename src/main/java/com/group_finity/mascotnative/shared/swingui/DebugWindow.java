@@ -2,6 +2,7 @@ package com.group_finity.mascotnative.shared.swingui;
 
 import com.group_finity.mascot.DebugUi;
 import com.group_finity.mascot.Mascot;
+import com.group_finity.mascot.Tr;
 import com.group_finity.mascot.behavior.UserBehavior;
 
 import javax.swing.*;
@@ -24,14 +25,14 @@ public class DebugWindow implements DebugUi {
     private Runnable afterDispose = () -> {};
 
     private enum Field {
-        IMAGE_SET("Image set"),
-        BEHAVIOR("Behaviour"),
-        POSITION("Position"),
-        FACING("Facing"),
-        ACTIVE_WINDOW("Active window"),
-        WINDOW_BOUNDS("Window bounds"),
-        WORK_AREA("Work area"),
-        MASCOT_COUNT("Mascot count");
+        IMAGE_SET(Tr.tr("DebugImageSet")),
+        BEHAVIOR(Tr.tr("DebugBehaviour")),
+        POSITION(Tr.tr("DebugPosition")),
+        FACING(Tr.tr("DebugFacing")),
+        ACTIVE_WINDOW(Tr.tr("DebugActiveWindow")),
+        WINDOW_BOUNDS(Tr.tr("DebugWindowBounds")),
+        WORK_AREA(Tr.tr("DebugWorkArea")),
+        MASCOT_COUNT(Tr.tr("DebugMascotCount"));
 
         final String label;
 
@@ -49,7 +50,7 @@ public class DebugWindow implements DebugUi {
             return;
         }
 
-        frame = new JFrame("ShimejiEE statistics");
+        frame = new JFrame(Tr.tr("DebugStatistics"));
         frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {
             @Override

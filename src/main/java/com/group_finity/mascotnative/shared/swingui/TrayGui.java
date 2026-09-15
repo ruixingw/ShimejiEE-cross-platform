@@ -67,7 +67,7 @@ public class TrayGui implements NativeUi {
 
     @Override
     public void showError(String message) {
-        JOptionPane.showMessageDialog(null, message, "Error", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(null, message, Tr.tr("Error"), JOptionPane.ERROR_MESSAGE);
     }
 
     @Override

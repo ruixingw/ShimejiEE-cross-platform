@@ -57,7 +57,7 @@ class CompactChooser {
             try {
                 CompactChooser.this.addDataToUI();
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(frame, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, e.getMessage(), Tr.tr("Error"), JOptionPane.ERROR_MESSAGE);
             }
 
             //Set up the content pane.

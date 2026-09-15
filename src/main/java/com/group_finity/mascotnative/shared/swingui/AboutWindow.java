@@ -73,15 +73,15 @@ public final class AboutWindow {
         sb.append("<html><body style='font-family:sans-serif'>");
 
         sb.append("<h2>ShimejiEE <small>").append(Constants.APP_VERSION).append("</small></h2>");
-        sb.append("<p>Desktop mascots for every platform.</p><hr>");
+        sb.append("<p>").append(escape(Tr.tr("AboutTagline"))).append("</p><hr>");
 
         sb.append("<h3>").append(Tr.tr("About")).append("</h3><p>");
-        sb.append(credit("LavenderSnek", "macOS maintainer", "https://github.com/LavenderSnek/ShimejiEE-cross-platform"));
-        sb.append("<br>").append(credit("Kilkakon", "sounds, affordances and japanese conf compatibility", "http://kilkakon.com/shimeji"));
-        sb.append("<br>").append(credit("nonowarn", "initial swing + jna mac implementation", "https://github.com/nonowarn/shimeji4mac"));
-        sb.append("<br>").append(credit("TigerHix", "64 bit support for windows", "https://github.com/TigerHix/shimeji-universal"));
-        sb.append("<br>").append("The shimeji-ee Group — i18n");
-        sb.append("<br>").append("Group Finity — the original creators of shimeji");
+        sb.append(credit("LavenderSnek", Tr.tr("AboutMacMaintainer"), "https://github.com/LavenderSnek/ShimejiEE-cross-platform"));
+        sb.append("<br>").append(credit("Kilkakon", Tr.tr("AboutKilkakonWork"), "http://kilkakon.com/shimeji"));
+        sb.append("<br>").append(credit("nonowarn", Tr.tr("AboutNonowarnWork"), "https://github.com/nonowarn/shimeji4mac"));
+        sb.append("<br>").append(credit("TigerHix", Tr.tr("AboutTigerHixWork"), "https://github.com/TigerHix/shimeji-universal"));
+        sb.append("<br>").append("The shimeji-ee Group — ").append(escape(Tr.tr("AboutShimejiEeGroupWork")));
+        sb.append("<br>").append("Group Finity — ").append(escape(Tr.tr("AboutGroupFinityWork")));
         sb.append("</p>");
 
         if (pf != null && imageSets != null && !imageSets.isEmpty()) {
