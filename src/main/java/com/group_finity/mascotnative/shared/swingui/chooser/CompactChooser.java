@@ -148,6 +148,22 @@ class CompactChooser {
 
         frame.getRootPane().setDefaultButton(buttonOK);
 
+        var buttonUseAll = new JButton(Tr.tr("UseAll"));
+        buttonUseAll.addActionListener(e -> {
+            frame.dispose();
+            try {
+                onSelection.accept(new ArrayList<>(java.util.List.of(programFolder.getImageSetNames().toArray(new String[0]))));
+            } catch (IOException ex) {
+                onSelection.accept(getSelections());
+            }
+        });
+
+        var buttonSelectAll = new JButton(Tr.tr("SelectAll"));
+        buttonSelectAll.addActionListener(e -> imageSetJlist.setSelectionInterval(0, imageSetJlist.getModel().getSize() - 1));
+
+        var buttonClearAll = new JButton(Tr.tr("ClearAll"));
+        buttonClearAll.addActionListener(e -> imageSetJlist.clearSelection());
+
         constraints = new GridBagConstraints();//reset
         var btnsPanel = new JPanel(gbl);
 
@@ -155,6 +171,9 @@ class CompactChooser {
         constraints.gridy = 1;
         constraints.insets = new Insets(0, 9, 9, 9);
         //constraints.gridx = 1;
+        btnsPanel.add(buttonUseAll);
+        btnsPanel.add(buttonSelectAll);
+        btnsPanel.add(buttonClearAll);
         btnsPanel.add(buttonCancel);
         btnsPanel.add(buttonOK);
 

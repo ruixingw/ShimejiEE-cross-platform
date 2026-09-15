@@ -5,9 +5,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiPredicate;
 import java.util.stream.Stream;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Element;
 
 /**
  * Represents the standard directory layout for shimeji and shimejiEE.
@@ -168,6 +172,94 @@ public record ShimejiProgramFolder(
             return iconPath;
         } else {
             return null;
+        }
+    }
+
+    //--- info.xml
+
+    /**
+     * Fields of a standard shimeji info.xml file
+     */
+    public enum InfoField {
+        NAME, PREVIEW_IMAGE, SPLASH_IMAGE,
+        ARTIST_NAME, ARTIST_URL,
+        SCRIPTER_NAME, SCRIPTER_URL,
+        COMMISSIONER_NAME, COMMISSIONER_URL,
+        SUPPORT_NAME, SUPPORT_URL;
+    }
+
+    /**
+     * Reads the info/credits file ({@code info.xml}) of an image set.
+     *
+     * @param imageSetName name of an imageSet in this program folder.
+     * @return the parsed values, or null when the image set has no readable info file.
+     */
+    public Map<InfoField, String> readInfoFile(String imageSetName) {
+        Path[] INFO_DIRS = {
+                imgPath.resolve(imageSetName).resolve(DEFAULT_CONF_DIR),
+                confPath.resolve(imageSetName),
+                confPath,
+        };
+
+        Path infoPath = null;
+        for (Path dir : INFO_DIRS) {
+            Path fp = dir.resolve("info.xml");
+            if (Files.isRegularFile(fp)) {
+                infoPath = fp;
+                break;
+            }
+        }
+
+        if (infoPath == null) {
+            return null;
+        }
+
+        try (var in = Files.newInputStream(infoPath)) {
+            var doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(in);
+            var root = doc.getDocumentElement();
+            if (root == null) {
+                return null;
+            }
+
+            Map<InfoField, String> ret = new EnumMap<>(InfoField.class);
+            var children = root.getChildNodes();
+            for (int i = 0; i < children.getLength(); i++) {
+                if (!(children.item(i) instanceof Element el)) {
+                    continue;
+                }
+
+                switch (el.getNodeName()) {
+                    case "Name" -> putText(ret, InfoField.NAME, el);
+                    case "PreviewImage" -> putText(ret, InfoField.PREVIEW_IMAGE, el);
+                    case "SplashImage" -> putText(ret, InfoField.SPLASH_IMAGE, el);
+                    case "Artist" -> putCred(ret, InfoField.ARTIST_NAME, InfoField.ARTIST_URL, el);
+                    case "Scripter" -> putCred(ret, InfoField.SCRIPTER_NAME, InfoField.SCRIPTER_URL, el);
+                    case "Commissioner" -> putCred(ret, InfoField.COMMISSIONER_NAME, InfoField.COMMISSIONER_URL, el);
+                    case "Support" -> putCred(ret, InfoField.SUPPORT_NAME, InfoField.SUPPORT_URL, el);
+                    default -> { }
+                }
+            }
+            return ret;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static void putText(Map<InfoField, String> out, InfoField field, Element el) {
+        String text = el.getTextContent();
+        if (text != null && !text.isBlank()) {
+            out.put(field, text.trim());
+        }
+    }
+
+    private static void putCred(Map<InfoField, String> out, InfoField nameField, InfoField urlField, Element el) {
+        var name = el.getAttribute("Name");
+        if (name != null && !name.isBlank()) {
+            out.put(nameField, name.trim());
+        }
+        var url = el.getAttribute("URL");
+        if (url != null && !url.isBlank()) {
+            out.put(urlField, url.trim());
         }
     }
 

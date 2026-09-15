@@ -30,6 +30,7 @@ public class TrayGui implements NativeUi {
 
     private final Controller controller;
     private MutablePrefs prefs;
+    private TrayIcon trayIcon;
 
     @Override
     public void start(MutablePrefs prefs, Runnable onFinish) {
@@ -44,15 +45,35 @@ public class TrayGui implements NativeUi {
 
     @Override
     public void reload() {
+        // rebuild the tray menu (with the new translations)
+        SwingUtilities.invokeLater(() -> {
+            removeTrayIcon();
+            if (prefs != null) {
+                createTrayIcon();
+            }
+        });
+    }
+
+    private void removeTrayIcon() {
         if (!SystemTray.isSupported()) {
             return;
         }
-        SystemTray.getSystemTray().remove(SystemTray.getSystemTray().getTrayIcons()[0]);
+        TrayIcon[] icons = SystemTray.getSystemTray().getTrayIcons();
+        for (TrayIcon icon : icons) {
+            SystemTray.getSystemTray().remove(icon);
+        }
+        trayIcon = null;
     }
 
     @Override
     public void showError(String message) {
         JOptionPane.showMessageDialog(null, message, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    @Override
+    public boolean askYesNo(String title, String message) {
+        return JOptionPane.showConfirmDialog(null, message, title,
+                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION;
     }
 
 
@@ -123,6 +144,7 @@ public class TrayGui implements NativeUi {
         bvTogglesMenu.add(awtToggle(Tr.tr("Transformation"), () -> prefs.Transformation, b -> prefs.Transformation = b));
         bvTogglesMenu.add(awtToggle(Tr.tr("ThrowingWindows"), () -> prefs.Throwing, b -> prefs.Throwing = b));
         bvTogglesMenu.add(awtToggle(Tr.tr("SoundEffects"), () -> prefs.Sounds, b -> prefs.Sounds = b));
+        bvTogglesMenu.add(awtToggle(Tr.tr("Multiscreen"), () -> prefs.Multiscreen, b -> prefs.Multiscreen = b));
         bvTogglesMenu.add(awtToggle(Tr.tr("TranslateBehaviorNames"), () -> prefs.TranslateBehaviorNames, b -> prefs.TranslateBehaviorNames = b));
         bvTogglesMenu.add(awtToggle(Tr.tr("AlwaysShowShimejiChooser"), () -> prefs.AlwaysShowShimejiChooser, b -> prefs.AlwaysShowShimejiChooser = b));
         bvTogglesMenu.add(awtToggle(Tr.tr("IgnoreImagesetProperties"), () -> prefs.IgnoreImagesetProperties, b -> prefs.IgnoreImagesetProperties = b));
@@ -139,6 +161,7 @@ public class TrayGui implements NativeUi {
         imgTogglesMenu.add(awtToggle(Tr.tr("LogicalAnchors"), () -> prefs.LogicalAnchors, b -> prefs.LogicalAnchors = b));
         imgTogglesMenu.add(awtToggle(Tr.tr("AsymmetryNameScheme"),() -> prefs.AsymmetryNameScheme, b -> prefs.AsymmetryNameScheme = b));
         imgTogglesMenu.add(awtToggle(Tr.tr("PixelArtScaling"),() -> prefs.PixelArtScaling, b -> prefs.PixelArtScaling = b));
+        imgTogglesMenu.add(awtToggle(Tr.tr("HqxScaling"),() -> prefs.HqxScaling, b -> prefs.HqxScaling = b));
         imgTogglesMenu.add(awtToggle(Tr.tr("FixRelativeGlobalSound"), () -> prefs.FixRelativeGlobalSound, b -> prefs.FixRelativeGlobalSound = b));
 
         //----------------------//
@@ -162,6 +185,11 @@ public class TrayGui implements NativeUi {
 
         trayPopup.add(awtActionBtn(Tr.tr("ChooseShimeji"), "ChooseShimeji"));
         trayPopup.add(awtActionBtn(Tr.tr("ReloadMascots"), "ReloadMascots"));
+        trayPopup.add(awtActionBtn(Tr.tr("Settings"), "Settings"));
+        trayPopup.add("-");
+        trayPopup.add(awtActionBtn(Tr.tr("PauseAnimations"), "PauseAnimations"));
+        trayPopup.add(awtActionBtn(Tr.tr("ResumeAnimations"), "ResumeAnimations"));
+        trayPopup.add(awtActionBtn(Tr.tr("About"), "About"));
         trayPopup.add(awtActionBtn(Tr.tr("DismissAll"), "DismissAll"));
         trayPopup.add(awtActionBtn(Tr.tr("Quit"), "Quit"));
 
@@ -179,14 +207,20 @@ public class TrayGui implements NativeUi {
                 trayIconImg = new BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB);
             }
 
-            final TrayIcon trayIcon = new TrayIcon(trayIconImg, "ShimejiEE", trayPopup);
+            trayIcon = new TrayIcon(trayIconImg,
+                    prefs != null && prefs.ShimejiEENameOverride != null && !prefs.ShimejiEENameOverride.isBlank()
+                            ? prefs.ShimejiEENameOverride
+                            : "ShimejiEE",
+                    trayPopup);
 
             // show tray icon
             SystemTray.getSystemTray().add(trayIcon);
 
         } catch (Exception e) {
             log.log(Level.SEVERE, "Failed to create tray menu", e);
-            System.exit(1);
+            if (SystemTray.getSystemTray().getTrayIcons().length == 0) {
+                System.exit(1);
+            }
         }
     }
 

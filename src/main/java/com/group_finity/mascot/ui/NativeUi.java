@@ -15,4 +15,13 @@ public interface NativeUi {
 
     void requestImageSetChooser(Collection<String> currentSelection, ShimejiProgramFolder pf);
 
+    /**
+     * Asks the user a yes/no question.
+     *
+     * @return true when the user answers yes.
+     */
+    default boolean askYesNo(String title, String message) {
+        return false;
+    }
+
 }
