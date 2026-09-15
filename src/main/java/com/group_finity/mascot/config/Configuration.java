@@ -18,6 +18,12 @@ public interface Configuration {
 
     Behavior buildBehavior(String name) throws BehaviorInstantiationException;
 
+    /**
+     * Whether the behavior with the given name is marked toggleable
+     * (it can be disabled by the user).
+     */
+    boolean isBehaviorToggleable(String name);
+
     Set<String> getActionNames();
 
     Set<String> getBehaviorNames();

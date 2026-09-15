@@ -4,6 +4,7 @@ import com.group_finity.mascot.window.contextmenu.MenuItemRep;
 import com.group_finity.mascot.window.contextmenu.MenuRep;
 import com.group_finity.mascot.window.contextmenu.TopLevelMenuRep;
 
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
@@ -56,7 +57,9 @@ public class SwingPopupUtil {
             return;
         }
 
-        var item = new JMenuItem(itemRep.getTitle());
+        var item = itemRep.getChecked() != null
+                ? new JCheckBoxMenuItem(itemRep.getTitle(), itemRep.getChecked())
+                : new JMenuItem(itemRep.getTitle());
 
         if (!itemRep.isEnabled()) {
             item.setEnabled(false);

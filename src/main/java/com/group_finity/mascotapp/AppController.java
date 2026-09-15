@@ -16,9 +16,14 @@ import com.group_finity.mascot.window.contextmenu.MenuRep;
 import com.group_finity.mascot.window.contextmenu.TopLevelMenuRep;
 import com.group_finity.mascot.imageset.ImageSetManager;
 import com.group_finity.mascot.imageset.ImageSetSelectionDelegate;
+import com.group_finity.mascot.environment.WindowTitleFilter;
 import com.group_finity.mascotapp.prefs.ComplexPrefs;
 import com.group_finity.mascotapp.prefs.MutablePrefs;
 import com.group_finity.mascotapp.prefs.Prefs;
+import com.group_finity.mascotnative.shared.swingui.AboutWindow;
+import com.group_finity.mascotnative.shared.swingui.DebugWindow;
+import com.group_finity.mascotnative.shared.swingui.InformationWindow;
+import com.group_finity.mascotnative.shared.swingui.SettingsWindow;
 import org.xml.sax.SAXException;
 
 
@@ -26,6 +31,10 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.awt.Point;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -75,6 +84,9 @@ public final class AppController implements Runnable, ImageSetSelectionDelegate,
     private Locale locale = Locale.ENGLISH;
     private MutablePrefs prefs = new MutablePrefs();
 
+    /** image set selection parsed at startup, applied once native is ready */
+    private Collection<String> pendingSelection = List.of();
+
     private final DefaultManager manager = new DefaultManager();
     private final ImageSetManager imageSets = new ImageSetManager(this::loadImageSet, this);
     private NativeUi ui;
@@ -83,17 +95,34 @@ public final class AppController implements Runnable, ImageSetSelectionDelegate,
     @Override
     public void run() {
         try {
-            // init native (needs to be before everything else)
-            final String nativeProp = System.getProperty("com.group_finity.mascotnative", Constants.NATIVE_PKG_DEFAULT);
-            NativeFactory.init(nativeProp, Constants.NATIVE_LIB_DIR);
-            NativeFactory.getInstance().getEnvironment().init();
-            ui = NativeFactory.getInstance().createUi(this);
+            if (!acquireSingleInstanceLock()) {
+                // the ui isn't up yet, so use a bare dialog
+                javax.swing.JOptionPane.showMessageDialog(null, Tr.tr("AlreadyRunning"),
+                        "ShimejiEE", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                System.exit(0);
+                return;
+            }
 
-            // init settings
+            // init settings first so the Environment pref can pick the backend
             loadAllSettings(SETTINGS_PATH);
             Tr.loadLanguage(locale);
             Tr.setCustomBehaviorTranslations(Prefs.readProps(Constants.JAR_DIR.resolve(Path.of("conf", USER_BEHAVIORNAMES_FILE))));
             Runtime.getRuntime().addShutdownHook(new Thread(() -> writeAllSettings(SETTINGS_PATH)));
+
+            // init native (needs to be before the image sets are loaded)
+            final String nativeProp = System.getProperty(
+                    "com.group_finity.mascotnative",
+                    prefs.Environment == null || prefs.Environment.isBlank() ? Constants.NATIVE_PKG_DEFAULT : prefs.Environment.trim());
+            NativeFactory.init(nativeProp, Constants.NATIVE_LIB_DIR);
+            NativeFactory.getInstance().getEnvironment().init();
+            ui = NativeFactory.getInstance().createUi(this);
+
+            // image sets need the native backend, so load them last
+            imageSets.setSelected(pendingSelection);
+
+            applyInteractiveWindowFilter();
+            applyVirtualDesktopSettings();
+            checkAccessibilityPermission();
 
             manager.start();
 
@@ -107,14 +136,127 @@ public final class AppController implements Runnable, ImageSetSelectionDelegate,
         } catch (Exception | Error error) {
             error.printStackTrace();
             log.log(Level.SEVERE, error.getMessage(), error);
-            ui.showError(error.getMessage());
+            if (ui != null) {
+                ui.showError(error.getMessage());
+            }
             System.exit(0);
         }
     }
 
+    //--------single instance--------//
+
+    private static FileChannel instanceLockChannel;
+    private static FileLock instanceLock;
+
+    /**
+     * Prevents two shimeji instances from fighting over the same window.
+     *
+     * @return false when another instance is already running.
+     */
+    private static boolean acquireSingleInstanceLock() {
+        try {
+            var lockFile = Constants.JAR_DIR.resolve(".shimeji-instance.lock").toFile();
+            instanceLockChannel = new RandomAccessFile(lockFile, "rw").getChannel();
+            instanceLock = instanceLockChannel.tryLock();
+            return instanceLock != null;
+        } catch (IOException | OverlappingFileLockException e) {
+            return false;
+        }
+    }
+
+    //--------permissions--------//
+
+    /**
+     * macOS accessibility is needed for ie (window) interactions.
+     * <p>
+     * Offers the system permission prompt once when it's missing and the user
+     * has window interactions enabled.
+     */
+    private void checkAccessibilityPermission() {
+        try {
+            var env = NativeFactory.getInstance().getEnvironment();
+            if (prefs.Throwing && !env.isAccessibilityTrusted()) {
+                if (ui.askYesNo(Tr.tr("AxPermissionTitle"), Tr.tr("AxPermissionMessage"))) {
+                    env.requestAccessibilityTrust();
+                }
+            }
+        } catch (Exception e) {
+            log.log(Level.WARNING, "accessibility check failed", e);
+        }
+    }
+
+    /**
+     * Pushes the interactive window captions from the prefs to the environment.
+     */
+    private void applyInteractiveWindowFilter() {
+        NativeFactory.getInstance().getEnvironment().setInteractiveWindowFilter(
+                WindowTitleFilter.parse(prefs.InteractiveWindows),
+                WindowTitleFilter.parse(prefs.InteractiveWindowsBlacklist));
+    }
+
+    /**
+     * Pushes the window mode (virtual desktop) settings to the environment.
+     */
+    private void applyVirtualDesktopSettings() {
+        NativeFactory.getInstance().getEnvironment().applyVirtualDesktopSettings(
+                prefs.WindowSize, prefs.Background, prefs.BackgroundMode, prefs.BackgroundImage);
+    }
+
+    /**
+     * Switches the backend at runtime when the Environment pref asks for
+     * something other than the current one.
+     */
+    private void applyEnvironment() {
+        var target = prefs.Environment == null ? "" : prefs.Environment.trim();
+        if (target.equals("auto") || target.isEmpty()) {
+            target = Constants.NATIVE_PKG_DEFAULT;
+        }
+        if (!target.equals(NativeFactory.getCurrentSubpkg())) {
+            switchEnvironment(target);
+        }
+    }
+
+    private void switchEnvironment(String subpkg) {
+        manager.disposeAll();
+        NativeFactory.init(subpkg, Constants.NATIVE_LIB_DIR);
+        NativeFactory.getInstance().getEnvironment().init();
+        applyInteractiveWindowFilter();
+        applyVirtualDesktopSettings();
+        reloadImageSets();
+    }
+
+    //--------information splash--------//
+
+    /**
+     * Shows the credits splash the first time an image set is used
+     * (or every time with AlwaysShowInformationScreen).
+     */
+    private void showInformationScreen(String name) {
+        if (!prefs.AlwaysShowInformationScreen
+                && WindowTitleFilter.parse(prefs.InformationDismissed).contains(name)) {
+            return;
+        }
+
+        var info = programFolder.readInfoFile(name);
+        if (info == null || info.get(com.group_finity.mascot.imageset.ShimejiProgramFolder.InfoField.SPLASH_IMAGE) == null) {
+            return;
+        }
+
+        InformationWindow.show(programFolder, name, info, () -> {
+            var dismissed = new ArrayList<>(WindowTitleFilter.parse(prefs.InformationDismissed));
+            if (!dismissed.contains(name)) {
+                dismissed.add(name);
+                prefs.InformationDismissed = String.join("/", dismissed);
+            }
+        });
+    }
+
     //--------imageSet management---------//
 
-    @Override public void imageSetHasBeenAdded(String name, ImageSet imageSet) { createMascot(name); }
+    @Override public void imageSetHasBeenAdded(String name, ImageSet imageSet) {
+        createMascot(name);
+        showInformationScreen(name);
+    }
     @Override public void dependencyHasBecomeSelection(String name, ImageSet imageSet) { createMascot(name); }
 
     @Override
@@ -167,9 +309,11 @@ public final class AppController implements Runnable, ImageSetSelectionDelegate,
 
         var imgLoader = new ImagePairLoaderBuilder()
                 .setScaling(scale)
+                .setOpacity(prefs.Opacity > 0.0 && prefs.Opacity <= 1.0 ? prefs.Opacity : 1.0)
                 .setLogicalAnchors(prefs.LogicalAnchors)
                 .setAsymmetryNameScheme(prefs.AsymmetryNameScheme)
                 .setPixelArtScaling(prefs.PixelArtScaling)
+                .setHqx(prefs.HqxScaling)
                 .buildForBasePath(pf.imgPath().resolve(name));
 
         SoundLoader soundLoader = new SoundLoader(pf, name);
@@ -242,7 +386,7 @@ public final class AppController implements Runnable, ImageSetSelectionDelegate,
         final Mascot mascot = new Mascot(imageSet, prefs, imageSets, new MascotUiFactory() {
             @Override
             public DebugUi createDebugUiFor(Mascot mascot) {
-                return _ -> {};
+                return new DebugWindow();
             }
 
             @Override
@@ -286,7 +430,7 @@ public final class AppController implements Runnable, ImageSetSelectionDelegate,
         }
 
         programFolder = complexPrefs.getProgramFolder(programFolder);
-        imageSets.setSelected(complexPrefs.getValidActiveImageSets(programFolder));
+        pendingSelection = complexPrefs.getValidActiveImageSets(programFolder);
     }
 
     private void writeAllSettings(Path outputFilePath) {
@@ -311,13 +455,22 @@ public final class AppController implements Runnable, ImageSetSelectionDelegate,
             entry("RestoreWindows", () -> NativeFactory.getInstance().getEnvironment().restoreIE()),
             entry("ChooseShimeji", () -> ui.requestImageSetChooser(imageSets.getSelected(), programFolder)),
             entry("ReloadMascots", this::reloadImageSets),
+            entry("Settings", () -> SettingsWindow.show(prefs, programFolder, imageSets.getSelected(), () -> {
+                applyInteractiveWindowFilter();
+                applyVirtualDesktopSettings();
+                applyEnvironment();
+                reloadImageSets();
+            })),
+            entry("PauseAnimations", () -> manager.setAllAnimating(false)),
+            entry("ResumeAnimations", () -> manager.setAllAnimating(true)),
+            entry("About", () -> AboutWindow.show(programFolder, imageSets.getSelected())),
             entry("DismissAll", manager::disposeAll),
             entry("Quit", () -> System.exit(0))
     );
 
     private final Map<String, Consumer<Mascot>> mascotActions = Map.ofEntries(
             entry("CallAnother", m -> createMascot(m.getImageSet())),
-//            entry("RevealStatistics", Mascot::startDebugUi),
+            entry("RevealStatistics", Mascot::startDebugUi),
             entry("FollowCursor", m -> {
                 try {
                     var conf = m.getOwnImageSet().getConfiguration();
@@ -326,6 +479,8 @@ public final class AppController implements Runnable, ImageSetSelectionDelegate,
                     // again, we're ignoring ChaseMouse not existing
                 }
             }),
+            entry("PauseAnimations", m -> m.setAnimating(false)),
+            entry("ResumeAnimations", m -> m.setAnimating(true)),
             entry("Dismiss", Mascot::dispose),
             entry("DismissOthers", m -> manager.disposeIf(mascot -> mascot.id != m.id && mascot.getImageSet().equals(m.getImageSet()))),
             entry("DismissAllOthers", m -> manager.disposeIf(mascot -> mascot.id != m.id))
@@ -373,6 +528,40 @@ public final class AppController implements Runnable, ImageSetSelectionDelegate,
         return bvItems;
     }
 
+    private List<MenuItemRep> createBehaviourToggleItemsFor(Mascot m) {
+        var conf = m.getOwnImageSet().getConfiguration();
+
+        List<MenuItemRep> items = new ArrayList<>();
+
+        for (String bvName : conf.getBehaviorNames()) {
+            if (!conf.isBehaviorToggleable(bvName)) {
+                continue;
+            }
+            String title = prefs.TranslateBehaviorNames ? Tr.trBv(bvName) : bvName;
+            boolean enabled = m.isBehaviorEnabled(bvName);
+            items.add(new MenuItemRep(title, () -> setMascotBehaviorEnabled(m, bvName, !m.isBehaviorEnabled(bvName)), true, enabled));
+        }
+
+        if (items.isEmpty()) {
+            items.add(new MenuItemRep(Tr.tr("More"), null, false));
+        }
+
+        return items;
+    }
+
+    /**
+     * Persists the per image set behavior toggles (DisabledBehaviours.<set>).
+     */
+    private void setMascotBehaviorEnabled(Mascot m, String behaviorName, boolean enabled) {
+        var setName = m.getImageSet();
+        var current = new ArrayList<>(WindowTitleFilter.parse(prefs.DisabledBehaviours.getOrDefault(setName, "")));
+        current.remove(behaviorName);
+        if (!enabled) {
+            current.add(behaviorName);
+        }
+        prefs.DisabledBehaviours.put(setName, String.join("/", current));
+    }
+
     private TopLevelMenuRep createCtxMenuFor(Mascot m) {
         var rep = new TopLevelMenuRep("mascot",
                 repActionBtn(Tr.tr("CallAnother"), "CallAnother", m),
@@ -381,6 +570,10 @@ public final class AppController implements Runnable, ImageSetSelectionDelegate,
                 repActionBtn(Tr.tr("RevealStatistics"), "RevealStatistics", m),
                 MenuItemRep.SEPARATOR,
                 new MenuRep(Tr.tr("SetBehaviour"), createBehaviourMenuItemsFor(m).toArray(new MenuItemRep[0])),
+                new MenuRep(Tr.tr("AllowedBehaviours"), createBehaviourToggleItemsFor(m).toArray(new MenuItemRep[0])),
+                MenuItemRep.SEPARATOR,
+                repActionBtn(Tr.tr("PauseAnimations"), "PauseAnimations", m),
+                repActionBtn(Tr.tr("ResumeAnimations"), "ResumeAnimations", m),
                 MenuItemRep.SEPARATOR,
                 repActionBtn(Tr.tr("Dismiss"), "Dismiss", m),
                 repActionBtn(Tr.tr("DismissOthers"), "DismissOthers", m),

@@ -28,6 +28,7 @@ public class BehaviorBuilder {
     private final int frequency;
     private final List<String> conditions;
     private final boolean hidden;
+    private final boolean toggleable;
     private final boolean nextAdditive;
 
     private final Map<String, String> params = new LinkedHashMap<>();
@@ -40,6 +41,7 @@ public class BehaviorBuilder {
         this.actionName = behaviorNode.getAttribute(configuration.getSchema().getString("Action")) == null ? getName() : behaviorNode.getAttribute(configuration.getSchema().getString("Action"));
         this.frequency = Integer.parseInt(behaviorNode.getAttribute(configuration.getSchema().getString("Frequency")));
         this.hidden = Boolean.parseBoolean(behaviorNode.getAttribute(configuration.getSchema().getString("Hidden")));
+        this.toggleable = Boolean.parseBoolean(behaviorNode.getAttribute(configuration.getSchema().getString("Toggleable")));
         this.conditions = new ArrayList<>(conditions);
         this.getConditions().add(behaviorNode.getAttribute(configuration.getSchema().getString("Condition")));
 
@@ -53,6 +55,7 @@ public class BehaviorBuilder {
         this.getParams().remove(configuration.getSchema().getString("Action"));
         this.getParams().remove(configuration.getSchema().getString("Frequency"));
         this.getParams().remove(configuration.getSchema().getString("Hidden"));
+        this.getParams().remove(configuration.getSchema().getString("Toggleable"));
         this.getParams().remove(configuration.getSchema().getString("Condition"));
 
         boolean nextAdditive = true;
@@ -149,6 +152,10 @@ public class BehaviorBuilder {
 
     public boolean isHidden() {
         return this.hidden;
+    }
+
+    public boolean isToggleable() {
+        return this.toggleable;
     }
 
     public boolean isNextAdditive() {

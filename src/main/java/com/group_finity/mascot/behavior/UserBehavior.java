@@ -191,7 +191,12 @@ public class UserBehavior implements Behavior {
         return this.configuration;
     }
 
-    private String getName() {
+    /**
+     * The name of this behavior in the config.
+     * <p>
+     * Mainly used for display/debugging purposes.
+     */
+    public String getName() {
         return this.name;
     }
 

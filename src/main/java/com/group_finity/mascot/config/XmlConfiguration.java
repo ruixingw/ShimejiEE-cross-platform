@@ -69,11 +69,26 @@ public class XmlConfiguration implements Configuration {
     public static Configuration loadUsing(PoseLoader poseLoader, Path... configFiles) throws IOException, SAXException, ConfigurationException {
         var conf = new XmlConfiguration();
         for (Path path : configFiles) {
-            var e = new Entry(docBuilder.parse(path.toFile()).getDocumentElement());
+            var doc = docBuilder.parse(path.toFile());
+            normalizeLegacyTags(doc);
+            var e = new Entry(doc.getDocumentElement());
             conf.load(poseLoader, e);
         }
         conf.validate();
         return conf;
+    }
+
+    /**
+     * Renames tags that the original shimeji accepted but this version doesn't
+     * (eg confs written with {@code <NextBehavior>} instead of
+     * {@code <NextBehaviorList>}).
+     */
+    private static void normalizeLegacyTags(org.w3c.dom.Document doc) {
+        var nodes = doc.getElementsByTagName("NextBehavior");
+        for (int i = nodes.getLength() - 1; i >= 0; i--) {
+            var node = nodes.item(i);
+            doc.renameNode(node, null, "NextBehaviorList");
+        }
     }
 
     public void load(PoseLoader poseLoader, Entry... mascotNodes) throws ConfigurationException, IOException {
@@ -149,6 +164,17 @@ public class XmlConfiguration implements Configuration {
         }
     }
 
+    /**
+     * Whether the given behavior is enabled for the mascot. Behaviors marked
+     * toggleable can be disabled by the user (per image set).
+     */
+    private static boolean isBehaviorEnabled(BehaviorBuilder builder, Mascot mascot) {
+        if (!builder.isToggleable()) {
+            return true;
+        }
+        return mascot.isBehaviorEnabled(builder.getName());
+    }
+
     @Override
     public Behavior buildBehavior(final String previousName, final Mascot mascot) throws BehaviorInstantiationException {
 
@@ -160,7 +186,7 @@ public class XmlConfiguration implements Configuration {
         long totalFrequency = 0;
         for (final BehaviorBuilder behaviorFactory : this.getBehaviorBuilders().values()) {
             try {
-                if (behaviorFactory.isEffective(context)) {
+                if (behaviorFactory.isEffective(context) && isBehaviorEnabled(behaviorFactory, mascot)) {
                     candidates.add(behaviorFactory);
                     totalFrequency += behaviorFactory.getFrequency();
                 }
@@ -177,7 +203,7 @@ public class XmlConfiguration implements Configuration {
             }
             for (final BehaviorBuilder behaviorFactory : previousBehaviorFactory.getNextBehaviorBuilders()) {
                 try {
-                    if (behaviorFactory.isEffective(context)) {
+                    if (behaviorFactory.isEffective(context) && isBehaviorEnabled(behaviorFactory, mascot)) {
                         candidates.add(behaviorFactory);
                         totalFrequency += behaviorFactory.getFrequency();
                     }
@@ -217,8 +243,13 @@ public class XmlConfiguration implements Configuration {
     public Behavior buildBehavior(final String name) throws BehaviorInstantiationException {
         if (getBehaviorBuilders().containsKey(name)) {
             return this.getBehaviorBuilders().get(name).buildBehavior();
-        }
-        throw new BehaviorInstantiationException(Tr.tr("NoBehaviourFoundErrorMessage") + ": Behaviour=" + name);
+        }        throw new BehaviorInstantiationException(Tr.tr("NoBehaviourFoundErrorMessage") + ": Behaviour=" + name);
+    }
+
+    @Override
+    public boolean isBehaviorToggleable(String name) {
+        var builder = getBehaviorBuilders().get(name);
+        return builder != null && builder.isToggleable();
     }
 
     private Map<String, String> getConstants() {

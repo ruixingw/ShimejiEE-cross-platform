@@ -283,5 +283,7 @@ public class Mascot implements ScriptableMascot {
     public boolean isTransientBreedingAllowed() { return prefProvider.isTransientBreedingAllowed(getImageSet()); }
     public boolean isTransformationAllowed() { return prefProvider.isTransformationAllowed(getImageSet()); }
     public boolean isSoundAllowed() { return prefProvider.isSoundAllowed(getImageSet()); }
+    public boolean isMultiscreenAllowed() { return prefProvider.isMultiscreenAllowed(getImageSet()); }
+    public boolean isBehaviorEnabled(String behaviorName) { return prefProvider.isBehaviorEnabled(getImageSet(), behaviorName); }
 
 }

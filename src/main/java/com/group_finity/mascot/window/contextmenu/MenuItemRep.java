@@ -12,6 +12,7 @@ public class MenuItemRep {
     private final String title;
     private final Runnable action;
     private boolean enabled = true;
+    private Boolean checked = null;
 
     public MenuItemRep(String title, Runnable action) {
         this.title = title;
@@ -21,6 +22,11 @@ public class MenuItemRep {
     public MenuItemRep(String title, Runnable action, boolean enabled) {
         this(title, enabled ? action : null);
         this.enabled = enabled;
+    }
+
+    public MenuItemRep(String title, Runnable action, boolean enabled, boolean checked) {
+        this(title, action, enabled);
+        this.checked = checked;
     }
 
     public boolean isSeparator() {
@@ -37,6 +43,13 @@ public class MenuItemRep {
 
     public boolean isEnabled() {
         return enabled;
+    }
+
+    /**
+     * The check state of a toggle item, or null when the item is a plain button.
+     */
+    public Boolean getChecked() {
+        return checked;
     }
 
 }

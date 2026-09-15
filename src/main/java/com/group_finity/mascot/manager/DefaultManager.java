@@ -74,6 +74,13 @@ public class DefaultManager implements MascotManager {
         });
     }
 
+    /**
+     * Pauses/resumes the animation of every mascot.
+     */
+    public void setAllAnimating(boolean animating) {
+        queueTask(() -> mascots.values().forEach(m -> m.setAnimating(animating)));
+    }
+
     public void trySetBehaviorAll(String name) {
         queueTask(() -> mascots.values().forEach(m -> {
             var conf  = m.getOwnImageSet().getConfiguration();
