@@ -110,6 +110,19 @@ void menu_add_button(struct Menu menu, char *title, MenuCallback on_click) {
     }
 }
 
+void menu_add_toggle(struct Menu menu, char *title, bool checked, MenuCallback on_click) {
+    @autoreleasepool {
+        NSString *nst = [[NSString alloc] initWithUTF8String:title];
+
+        [Util runOnMainSync:^{
+            NSMenuItem *item = [[[CbMenuItem alloc] initWithTitle:nst
+                                                         callback:on_click] autorelease];
+            [item setState:checked ? NSControlStateValueOn : NSControlStateValueOff];
+            [(NSMenu*)menu.data addItem:item];
+        }];
+    }
+}
+
 void menu_add_disabled(struct Menu menu, char *title) {
     @autoreleasepool {
         NSString *nst = [[NSString alloc] initWithUTF8String:title];

@@ -34,8 +34,8 @@ public class NativeFactoryImpl extends NativeFactory {
     }
 
     @Override
-    public NativeImage newNativeImage(Path path, double scaling, boolean flipped, boolean antialiasing) {
-        return PanamaImage.loadFrom(path, scaling, flipped, antialiasing);
+    public NativeImage newNativeImage(Path path, double scaling, boolean flipped, boolean antialiasing, double opacity, boolean hqx) {
+        return PanamaImage.loadFrom(path, scaling, flipped, antialiasing, opacity, hqx);
     }
 
     @Override

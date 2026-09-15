@@ -38,6 +38,8 @@ class PanamaWindow implements TranslucentWindow {
                 NativeRenderer_h.menu_add_separator(menu);
             } else if (!item.isEnabled()) {
                 NativeRenderer_h.menu_add_disabled(menu, arena.allocateFrom(item.getTitle()));
+            } else if (item.getChecked() != null) {
+                NativeRenderer_h.menu_add_toggle(menu, arena.allocateFrom(item.getTitle()), item.getChecked(), MenuCallback.allocate(() -> item.getAction().run(), arena));
             } else {
                 NativeRenderer_h.menu_add_button(menu, arena.allocateFrom(item.getTitle()), MenuCallback.allocate(() -> item.getAction().run(), arena));
             }

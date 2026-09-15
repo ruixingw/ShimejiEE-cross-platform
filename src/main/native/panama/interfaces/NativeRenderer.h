@@ -16,10 +16,17 @@ struct ImageLoadingOptions {
     double scaling;
     bool flipped;
     bool anti_alias;
+    double opacity;
 };
 
 struct Image image_load(char* path, struct ImageLoadingOptions options);
 void image_dispose(struct Image image);
+
+/**
+ * Creates an image from premultiplied ARGB pixel data
+ * (bytes in memory ordered A, R, G, B).
+ */
+struct Image image_create_from_argb(int width, int height, const unsigned char* pixels);
 
 //----Menu
 struct Menu {
@@ -36,6 +43,7 @@ struct MenuCallbacks {
 struct Menu menu_create(char* title, struct MenuCallbacks callbacks);
 struct Menu menu_create_submenu(struct Menu parent, char* title);
 void menu_add_button(struct Menu menu, char* title, MenuCallback on_click);
+void menu_add_toggle(struct Menu menu, char* title, bool checked, MenuCallback on_click);
 void menu_add_disabled(struct Menu menu, char* title);
 void menu_add_separator(struct Menu menu);
 
