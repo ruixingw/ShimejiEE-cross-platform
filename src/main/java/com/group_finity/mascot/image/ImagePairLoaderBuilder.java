@@ -5,9 +5,11 @@ import java.nio.file.Path;
 public class ImagePairLoaderBuilder {
 
     double scaling = 1;
+    double opacity = 1;
     boolean logicalAnchors = false;
     boolean asymmetryNameScheme = false;
     boolean pixelArtScaling = false;
+    boolean hqx = false;
 
     public double getScaling() {
         return scaling;
@@ -27,6 +29,24 @@ public class ImagePairLoaderBuilder {
             throw new IllegalArgumentException("Invalid scaling: '" + scaling + "'\n" + "Scaling must be greater than 0.");
         }
         this.scaling = scaling;
+        return this;
+    }
+
+    public double getOpacity() {
+        return opacity;
+    }
+
+    /**
+     * Sets the overall opacity of the mascots. Baked into the images on load.
+     *
+     * @param opacity A number between 0 and 1.
+     * @throws IllegalArgumentException if the opacity is outside of 0-1.
+     */
+    public ImagePairLoaderBuilder setOpacity(double opacity) {
+        if (opacity <= 0 || opacity > 1 || !Double.isFinite(opacity)) {
+            throw new IllegalArgumentException("Invalid opacity: '" + opacity + "'\n" + "Opacity must be in (0, 1].");
+        }
+        this.opacity = opacity;
         return this;
     }
 
@@ -72,6 +92,19 @@ public class ImagePairLoaderBuilder {
      */
     public ImagePairLoaderBuilder setPixelArtScaling(boolean pixelArtScaling) {
         this.pixelArtScaling = pixelArtScaling;
+        return this;
+    }
+
+    public boolean isHqx() {
+        return hqx;
+    }
+
+    /**
+     * Uses the hqx pixel art scaling algorithm for whole number scaling
+     * (2x, 3x, 4x, 6x, 8x). Other factors fall back to the normal behavior.
+     */
+    public ImagePairLoaderBuilder setHqx(boolean hqx) {
+        this.hqx = hqx;
         return this;
     }
 

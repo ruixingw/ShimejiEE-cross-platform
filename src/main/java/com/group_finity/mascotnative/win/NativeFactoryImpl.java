@@ -20,8 +20,8 @@ public class NativeFactoryImpl extends NativeFactory {
     }
 
     @Override
-    public NativeImage newNativeImage(Path path, double scaling, boolean flipped, boolean antialiasing) throws IOException {
-        return new WindowsNativeImage(ImageUtil.newBufferedImage(path, scaling, flipped, antialiasing), 1);
+    public NativeImage newNativeImage(Path path, double scaling, boolean flipped, boolean antialiasing, double opacity, boolean hqx) throws IOException {
+        return new WindowsNativeImage(ImageUtil.newBufferedImage(path, scaling, flipped, antialiasing, opacity, hqx), 1);
     }
 
     @Override

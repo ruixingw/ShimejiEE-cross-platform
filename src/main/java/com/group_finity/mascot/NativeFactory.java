@@ -23,14 +23,20 @@ public abstract class NativeFactory {
     private static final String NATIVE_PKG = "com.group_finity.mascotnative";
 
     private static NativeFactory instance;
+    private static String currentSubpkg;
 
     protected static Path nativeLibDir;
+
+    public static String getCurrentSubpkg() {
+        return currentSubpkg;
+    }
 
     public static void init(String subpkg, Path libDir) {
         if (instance != null) {
             instance.shutdown();
         }
 
+        currentSubpkg = subpkg;
         nativeLibDir = libDir;
 
         System.out.println(nativeLibDir);
@@ -56,7 +62,7 @@ public abstract class NativeFactory {
 
     public abstract NativeEnvironment getEnvironment();
 
-    public abstract NativeImage newNativeImage(Path path, double scaling, boolean flipped, boolean antialiasing) throws IOException;
+    public abstract NativeImage newNativeImage(Path path, double scaling, boolean flipped, boolean antialiasing, double opacity, boolean hqx) throws IOException;
 
     private static class DfltRenderer implements NativeRenderer {
         private ConcurrentMap<Integer, TranslucentWindow> windows = new ConcurrentHashMap<>();

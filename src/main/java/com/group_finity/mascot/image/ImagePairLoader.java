@@ -18,17 +18,21 @@ public class ImagePairLoader implements ImagePairStore {
     private final List<NativeImage> loadedImageRefs = new ArrayList<>();
 
     private final double scaling;
+    private final double opacity;
     private final boolean logicalAnchors;
     private final boolean asymmetryNameScheme;
     private final boolean pixelArtScaling;
+    private final boolean hqx;
 
     private final Path basePath;
 
     ImagePairLoader(ImagePairLoaderBuilder builder, Path basePath) {
         this.scaling = builder.scaling;
+        this.opacity = builder.opacity;
         this.logicalAnchors = builder.logicalAnchors;
         this.asymmetryNameScheme = builder.asymmetryNameScheme;
         this.pixelArtScaling = builder.pixelArtScaling;
+        this.hqx = builder.hqx;
         this.basePath = basePath;
     }
 
@@ -90,10 +94,10 @@ public class ImagePairLoader implements ImagePairStore {
     }
 
     protected ImagePair createImagePair(Path leftImgPath, Path rightImgPath, Point rawAnchor, double scaling) throws IOException {
-        var leftImg = NativeFactory.getInstance().newNativeImage(leftImgPath, scaling, false, !pixelArtScaling);
+        var leftImg = NativeFactory.getInstance().newNativeImage(leftImgPath, scaling, false, !pixelArtScaling, opacity, hqx);
         var rightImg = rightImgPath == null
-                ? NativeFactory.getInstance().newNativeImage(leftImgPath, scaling, true, !pixelArtScaling)
-                : NativeFactory.getInstance().newNativeImage(rightImgPath, scaling, false, !pixelArtScaling);
+                ? NativeFactory.getInstance().newNativeImage(leftImgPath, scaling, true, !pixelArtScaling, opacity, hqx)
+                : NativeFactory.getInstance().newNativeImage(rightImgPath, scaling, false, !pixelArtScaling, opacity, hqx);
 
         final Point scaledAnchor = new Point(
                 (int) Math.round(rawAnchor.x * scaling),
