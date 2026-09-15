@@ -85,3 +85,23 @@ Group license _possibly_ uses new BSD. However, it also states that the original
 that it still uses the zlib license and misidentified it for new BSD.
 
 Same conditions as those above apply to this fork.
+
+ruixingw
+--------
+
+[github.com/ruixingw](https://github.com/ruixingw/ShimejiEE-cross-platform)
+
+Continuation of the cross-platform fork with the macOS window interactions, the original settings/behaviour
+features and the Chinese translation restored. Same conditions as those above apply to this fork.
+
+hqx-java (bundled)
+------------------
+
+The pixel art scaler under `src/main/java/hqx/` is [hqx-java](https://github.com/Arcnor/hqx-java), based on hqx by
+Maxim Stepin, with contributions by Cameron Zmek, Tamme Schichler and A. Eduardo Garcia (Arcnor).
+
+Copyright © 2003 Maxim Stepin (maxst@hiend3d.com), 2010 Cameron Zemek (grom@zeminvaders.net),
+2011 Tamme Schichler (tamme.schichler@googlemail.com), 2012 A. Eduardo García (arcnorj@gmail.com)
+
+It is licensed under the [GNU Lesser General Public License v3](https://www.gnu.org/licenses/lgpl-3.0.html) or later;
+the full license notice is kept in the file headers.

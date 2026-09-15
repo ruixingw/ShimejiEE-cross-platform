@@ -1,62 +1,105 @@
+# ShimejiEE Cross-Platform
 
-ShimejiEE Cross Platform
-========================
+[简体中文](README.zh_CN.md) | English
 
-https://github.com/LavenderSnek/ShimejiEE-cross-platform
+A cross-platform port of the Shimeji desktop mascots, based on
+[Kilkakon's shimeji](https://kilkakon.com/shimeji/) and
+[LavenderSnek/ShimejiEE-cross-platform](https://github.com/LavenderSnek/ShimejiEE-cross-platform).
+This fork restores the macOS window interactions and the original settings/behaviour features, and ships a
+complete Chinese translation.
 
-The releases aren't updated frequently, [build from source](docs/building.md) for the latest version.
+> Done entirely by vibe coding using [GLM-5.3](https://z.ai) (Z.ai).
 
-This project is a fork of [Kilkakon's shimeji version](http://kilkakon.com/shimeji) and incorporates the work from [nonowarn's shimeji4mac](https://github.com/nonowarn/shimeji4mac)
+[![Release](https://img.shields.io/badge/release-v2.2.0-blue)](https://github.com/ruixingw/ShimejiEE-cross-platform/releases)
 
-Installation
--------
+## Highlights
 
-- macOS:
-  - Download the `mac-jre` version
-  - Click the file named `ShimejiEE-launcher`. 
-  - If the OS doesn't let you open it because it's from an unidentified developer: 
-    - Go to System preferences → Security & privacy → General, and make sure `App Store and Identified developers` is selected in the "Allow apps downloaded from:" section
-    - Restart you computer, just to be safe
-    - Now right-click the launcher and click open. Ignore the warnings. 
-  - If it still doesn't work, try re-downloading it directly from the GitHub releases page and make sure to unzip with Archiver.app
+- **Real macOS window interactions**: mascots grab, carry and throw real windows, and *Restore Windows* in the tray
+  brings thrown windows back; mascots respect the Dock and menu bar
+- **Interactive windows whitelist/blacklist** like the original Windows version — mascots seek out matching windows
+  even when they are not frontmost
+- **Full settings window** (General / Interactive Windows / Window Mode / About): scaling in 0.1 steps, opacity,
+  scaling filter (nearest / bicubic / hqx), every behaviour toggle, tray name override, ...
+- **Per-behaviour toggles** from the mascot context menu for behaviours marked `Toggleable` (compatible with the
+  original `DisabledBehaviours` format)
+- **Window mode (sandbox)**: keep mascots inside a window with configurable size, background colour and background
+  image (centre/fill/fit/stretch) — nice for streaming
+- Pause/resume animations (globally and per mascot), multiscreen toggle, single instance protection, first-run
+  credits splash, mascot statistics window
+- Complete Simplified Chinese (plus Traditional Chinese and 20+ other languages)
 
-- Linux:
-  - First consider trying out [linux-shimeji](https://github.com/asdfman/linux-shimeji), it has x11 support
-  - Download the `no-jre` version. 
-  - Still a WIP with lots of issues, but you can use java 17 to launch `ShimejiEE.jar`. 
-  - Install java from a different vendor if `libawt_xawt.so` is missing. 
-  - All program files are lowercase by default but Image-sets might break due to case sensitivity.
+## Platform support
 
-- Windows:
-  - Download the `no-jre` version. 
-  - Untested but you can try it out; Just make sure to use java 17.
+| Platform | Status |
+|---|---|
+| macOS (Apple Silicon / Intel) | ✅ Primary, native rendering + window interactions |
+| Windows | ⚠️ Inherited from upstream, lightly tested |
+| Linux | ⚠️ Basic support, window interactions not implemented |
 
+## Installation (macOS)
 
-Credits
--------
+1. Download the `no-jre` build from [Releases](https://github.com/ruixingw/ShimejiEE-cross-platform/releases) and
+   unzip it;
+2. Install a **JDK 23 or newer** (Homebrew: `brew install openjdk`);
+3. Run:
 
-- LavenderSnek
-  - macOS maintainer (this fork)
-  - [Github page](https://github.com/LavenderSnek/ShimejiEE-cross-platform)
+   ```bash
+   cd ShimejiEE
+   java -jar ShimejiEE.jar
+   ```
 
-- Kilkakon
-  - Current maintainer. Added sounds, affordances, and japanese conf compatibility.
-  - [Homepage](http://kilkakon.com/shimeji)
-  - [Shimeji discord](https://discord.gg/dcJGAn3)
+4. Pick your mascots from the tray menu on first start (drop image sets into `img/`);
+5. **Window interactions require the Accessibility permission**: System Settings → Privacy & Security →
+   Accessibility → add the `java` binary running Shimeji. The app offers to open this when needed.
 
-- nonowarn
-  - Wrote the initial swing + jna mac implementation
-  - [GitHub page](https://github.com/nonowarn/shimeji4mac)
+## Layout
 
-- TigerHix
-  - Added 64 bit support for windows
-  - [GitHub page](https://github.com/TigerHix/shimeji-universal)
+```
+ShimejiEE/
+├── ShimejiEE.jar      main program
+├── lib/               native libraries (leave alone)
+├── conf/              configuration (incl. settings.properties)
+├── img/               image sets (one folder each)
+└── sound/             global sounds (optional)
+```
 
-- The shimeji-ee Group
-  - Added i18n
-  - [Google Code repo](https://code.google.com/archive/p/shimeji-ee/source/default/commits)
+Image sets can be downloaded from communities like
+[the shimeji tag on DeviantArt](https://www.deviantart.com/tag/shimeji); drop them into `img/` and select them via
+the tray's *Choose Shimeji*. Folders inside `img/unused/` are hidden.
 
-- Group Finity (Original)
-  - The original creator(s) of shimeji
-  - [Homepage snapshot](https://web.archive.org/web/20140530231026/http://www.group-finity.com/Shimeji/)
-  - [Vector page](https://www.vector.co.jp/soft/winnt/amuse/se476479.html )
+## Building from source
+
+Requires Python 3.13+, JDK 23+, Maven, CMake, Ninja and [jextract](https://jdk.java.net/jextract/).
+
+```bash
+python3 build.py --jextract <path-to-jextract>
+```
+
+The install folder is created at `build/ShimejiEE/`. See [docs/building.md](docs/building.md).
+
+## Known limitations
+
+- Multi-monitor setups are not thoroughly tested;
+- Linux window interactions (X11/Wayland) are not implemented;
+- The original NimROD theme editor was not ported.
+
+## Credits
+
+This project stands on the shoulders of:
+
+- **Group Finity** (Yuki Yamada) — original Shimeji
+  ([archived site](https://web.archive.org/web/20140530231026/http://www.group-finity.com/Shimeji/))
+- **shimeji-ee Group** — internationalisation and many improvements
+- **[Kilkakon](https://kilkakon.com/shimeji/)** — long term maintenance: sounds, affordances, japanese conf
+  compatibility ([Discord](https://discord.gg/dcJGAn3))
+- **[nonowarn](https://github.com/nonowarn/shimeji4mac)** — the initial macOS implementation
+- **[TigerHix](https://github.com/TigerHix/shimeji-universal)** — 64 bit support for Windows
+- **[LavenderSnek](https://github.com/LavenderSnek/ShimejiEE-cross-platform)** — the cross-platform fork and the
+  panama native backend
+
+The bundled [hqx-java](https://github.com/Arcnor/hqx-java) pixel scaler is LGPL-3 licensed.
+
+## License
+
+Same terms as upstream (zlib style: keep the attribution, mark your changes) — the full license chain is in
+[LICENSE.md](LICENSE.md).
